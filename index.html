@@ -51,6 +51,7 @@
             font-size: 2rem;
             font-weight: bold;
             color: #333;
+            max-width: 90%;
         }
 
         .modal-buttons button {
@@ -72,22 +73,30 @@
         .board-container {
             position: relative;
             display: inline-block;
+            /* Add a nice shadow */
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
         }
 
         :root {
-            /* Dynamic cell size */
-            --cell-size: calc(min(100vw / 20, 100vh / 15));
+            /* Calculates cell size to fit 20 cols and 15 rows 
+               within 95% of viewport width/height.
+               This ensures squares are ALWAYS square.
+            */
+            --cell-size: calc(min(95vw / 20, 95vh / 15));
         }
 
         .board {
             position: relative;
             display: grid;
-            grid-template-columns: repeat(20, 1fr);
-            grid-template-rows: repeat(15, 1fr);
-            width: calc(var(--cell-size) * 20 * 0.95);
-            height: calc(var(--cell-size) * 15 * 0.95);
+            /* Strictly 20x15 grid */
+            grid-template-columns: repeat(20, var(--cell-size));
+            grid-template-rows: repeat(15, var(--cell-size));
+            
+            /* Width/Height explicitly set to match grid to prevent any flex squashing */
+            width: calc(var(--cell-size) * 20);
+            height: calc(var(--cell-size) * 15);
+            
             border: 8px solid #3e2723;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
             z-index: 1;
         }
 
@@ -97,10 +106,12 @@
             justify-content: center;
             position: relative;
             z-index: 1;
+            width: 100%;
+            height: 100%;
         }
 
         .light { background-color: #eeeed2; }
-        .dark { background-color: #769656; } /* Slightly greener standard chess color */
+        .dark { background-color: #769656; } 
 
         /* Canvas for "thinking lines" */
         #thinkingCanvas {
@@ -115,13 +126,19 @@
         .piece {
             width: 100%;
             height: 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 85%; /* Pieces fill 85% of square */
             position: absolute;
             pointer-events: none;
             z-index: 3;
-            /* Drop shadow for depth on the sprites */
+            
+            /* CRITICAL FIXES FOR PROPORTIONS: */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain; /* Maintains Aspect Ratio strictly */
+            
+            /* Scales piece down to 85% of the square so it has "breathing room" */
+            transform: scale(0.85); 
+            
+            /* Drop shadow for depth */
             filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.4));
         }
 
@@ -130,23 +147,27 @@
             z-index: 100;
             pointer-events: none;
             will-change: transform;
-            width: calc(var(--cell-size) * 0.95); /* match grid cell size roughly */
-            height: calc(var(--cell-size) * 0.95);
+            width: var(--cell-size);
+            height: var(--cell-size);
+            /* Match the look of static pieces */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            transform: scale(0.85); 
         }
 
         /* Highlight styles */
         .check-highlight {
-            background-color: #ff5555 !important; /* Redder check */
+            background-color: #ff5555 !important;
         }
 
         .highlight {
-            /* Little dot or highlight overlay for valid moves */
             box-shadow: inset 0 0 0 4px rgba(0,0,0,0.2);
             background-color: #f7f769 !important;
         }
 
         .move-highlight {
-            background-color: #bbcb2b !important; /* Lichess-style move highlight */
+            background-color: #bbcb2b !important; 
         }
     </style>
 </head>
@@ -157,6 +178,7 @@
         <div class="board" id="chessboard"></div>
     </div>
 
+    <!-- Welcome Modal -->
     <div id="welcomeModal" class="modal">
         <div class="modal-content">Welcome to Big ASS Chess</div>
         <div class="modal-buttons">
@@ -165,6 +187,7 @@
         </div>
     </div>
 
+    <!-- Alert Modal -->
     <div id="alertModal" class="modal" style="display:none;">
         <div class="modal-content" id="modal-message"></div>
         <div class="modal-buttons">
@@ -174,6 +197,7 @@
 
     <script>
         /***** ASSETS (Wikimedia Commons SVGs) *****/
+        // Using high-quality SVG assets ensures perfect scaling without pixelation
         const PIECE_ASSETS = {
             white: {
                 king:   "https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg",
@@ -756,12 +780,13 @@
             clone.style.position = 'absolute';
             clone.style.left = startX + 'px';
             clone.style.top = startY + 'px';
+            clone.style.backgroundImage = pieceElem.style.backgroundImage; // Copy BG
             boardElem.appendChild(clone);
 
             pieceElem.style.visibility = 'hidden';
             clone.offsetWidth; 
             clone.style.transition = 'transform 0.25s linear';
-            clone.style.transform = `translate3d(${endX - startX}px, ${endY - startY}px, 0)`;
+            clone.style.transform = `translate3d(${endX - startX}px, ${endY - startY}px, 0) scale(0.85)`;
 
             clone.addEventListener('transitionend', () => {
                 clone.remove();
